@@ -1,0 +1,171 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2f5d50">
+<title>墨竹亭 光復店 耗損登記表</title>
+<style>/*STYLES*/</style>
+
+<header class="top">
+  <h1>耗損登記表</h1>
+  <p class="store">墨竹亭 · 光復店</p>
+</header>
+
+<nav class="tabs" role="tablist">
+  <button class="tab is-on" data-tab="log" role="tab">登記</button>
+  <button class="tab" data-tab="cost" role="tab">成本設定</button>
+  <button class="tab" data-tab="stat" role="tab">統計</button>
+</nav>
+
+<main>
+
+<section id="page-log" class="page is-on">
+  <div id="sync" class="sync" hidden>
+    <span id="sync-text"></span>
+    <button type="button" id="sync-btn">立即重送</button>
+  </div>
+
+  <form id="log-form" autocomplete="off">
+    <div class="field">
+      <label for="f-date">日期</label>
+      <input type="date" id="f-date" required>
+    </div>
+
+    <div class="field">
+      <label for="f-name">品名</label>
+      <div class="ac">
+        <input type="text" id="f-name" placeholder="打前幾個字就會出現" required>
+        <ul id="ac-list" class="ac-list" hidden></ul>
+      </div>
+      <p id="f-newhint" class="hint hint-new" hidden>成本表沒有這個品名，送出時會請你補建。</p>
+    </div>
+
+    <div class="row">
+      <div class="field">
+        <label for="f-cat">品類</label>
+        <select id="f-cat" required></select>
+      </div>
+      <div class="field field-sm">
+        <label for="f-unit">單位</label>
+        <input type="text" id="f-unit" readonly placeholder="—">
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="field">
+        <label for="f-qty">耗損量</label>
+        <input type="number" id="f-qty" step="0.01" min="0" inputmode="decimal" placeholder="0" required>
+      </div>
+      <div class="field field-sm">
+        <label for="f-cost">單位成本</label>
+        <input type="text" id="f-cost" readonly placeholder="—">
+      </div>
+    </div>
+
+    <div class="amount">
+      <span>金額</span>
+      <strong id="f-amount">$0</strong>
+    </div>
+
+    <div class="field">
+      <label for="f-reason">原因</label>
+      <select id="f-reason" required></select>
+    </div>
+
+    <div class="field" id="f-reasonnote-wrap" hidden>
+      <label for="f-reasonnote">原因說明</label>
+      <input type="text" id="f-reasonnote" placeholder="請簡短說明">
+    </div>
+
+    <div class="field">
+      <label for="f-memo">備註<span class="opt">選填</span></label>
+      <input type="text" id="f-memo">
+    </div>
+
+    <button type="submit" class="btn-main">送出登記</button>
+  </form>
+
+  <div class="today">
+    <div class="today-head">
+      <h2>今天這幾筆</h2>
+      <span id="today-sum">$0</span>
+    </div>
+    <ul id="today-list" class="rec-list"></ul>
+    <p id="today-empty" class="empty">今天還沒有登記。</p>
+  </div>
+</section>
+
+<section id="page-cost" class="page">
+  <form id="cost-form" autocomplete="off">
+    <h2 id="cost-title">新增品項</h2>
+    <div class="field">
+      <label for="c-name">品名</label>
+      <input type="text" id="c-name" required>
+    </div>
+    <div class="row">
+      <div class="field">
+        <label for="c-cat">品類</label>
+        <select id="c-cat" required></select>
+      </div>
+      <div class="field field-sm">
+        <label for="c-unit">單位</label>
+        <input type="text" id="c-unit" placeholder="包" required>
+      </div>
+    </div>
+    <div class="field">
+      <label for="c-cost">單位成本（元）</label>
+      <input type="number" id="c-cost" step="0.01" min="0" inputmode="decimal" required>
+    </div>
+    <div class="btn-pair">
+      <button type="submit" class="btn-main" id="c-save">儲存品項</button>
+      <button type="button" class="btn-ghost" id="c-cancel" hidden>取消編輯</button>
+    </div>
+  </form>
+
+  <div class="field search">
+    <input type="search" id="c-search" placeholder="搜尋品名或品類">
+  </div>
+  <ul id="cost-list" class="item-list"></ul>
+  <p id="cost-empty" class="empty">成本表還是空的，先新增第一個品項。</p>
+</section>
+
+<section id="page-stat" class="page">
+  <div class="seg" id="s-seg">
+    <button type="button" data-k="today">本日</button>
+    <button type="button" data-k="week" class="on">本週</button>
+    <button type="button" data-k="month">本月</button>
+    <button type="button" data-k="custom">自訂</button>
+  </div>
+
+  <div class="row" id="s-custom" hidden>
+    <div class="field"><label for="s-from">起</label><input type="date" id="s-from"></div>
+    <div class="field"><label for="s-to">迄</label><input type="date" id="s-to"></div>
+  </div>
+
+  <div class="sum-card">
+    <div class="sum-label">耗損總金額<span id="s-range"></span></div>
+    <div class="sum-big" id="s-total">$0</div>
+    <div class="sum-sub"><span id="s-count">0 筆</span><span id="s-delta"></span></div>
+  </div>
+
+  <div class="block" id="s-chartblock">
+    <h3>每日走勢</h3>
+    <div class="chart" id="s-chart"></div>
+    <div class="chart-axis"><span id="s-axis-a"></span><span id="s-axis-b"></span></div>
+  </div>
+
+  <div class="block"><h3>按品類</h3><ul id="s-cat" class="rank"></ul></div>
+  <div class="block"><h3>按品名</h3><ul id="s-item" class="rank"></ul></div>
+  <div class="block"><h3>按原因</h3><ul id="s-reason" class="rank"></ul></div>
+
+  <div class="btn-pair no-print">
+    <button type="button" class="btn-ghost" id="s-csv">匯出 CSV</button>
+    <button type="button" class="btn-ghost" id="s-print">列印</button>
+  </div>
+
+  <p id="s-empty" class="empty">這段期間還沒有紀錄。</p>
+</section>
+
+</main>
+
+<div id="toast" class="toast" hidden></div>
+
+<script>/*SCRIPT*/</script>
