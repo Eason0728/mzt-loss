@@ -122,6 +122,8 @@
 | `saveItem` | `{action:"saveItem", item:{品名,品類,單位,單位成本,停用}}` | `{items:[...]}`　以品名 upsert，回傳整份最新成本表 |
 | `addLoss` | `{action:"addLoss", records:[ …見 3.2 A~L… ]}` | `{accepted:[id…], duplicated:[id…]}`　可一次送多筆（補送佇列） |
 | `listLoss` | `{action:"listLoss", from:"YYYY-MM-DD", to:"YYYY-MM-DD"}` | `{records:[...]}`　統計頁用 |
+| `voidLoss` | `{action:"voidLoss", id:"L-…"}` | `{ok:true, id}`　把該列 `作廢` 設 TRUE，不刪列不改數字 |
+| `ping` | `{action:"ping"}` | `{pong:true, serverTime}`　健康檢查 |
 
 ### 4.3 `id` 格式（逐字元定義，兩端必須完全一致）
 
@@ -206,6 +208,20 @@ Apps Script 專案時區要設 `Asia/Taipei`（預設是美東，日期會差一
 **這也代表本 repo 永遠不得放任何密碼或金鑰。**
 
 **鐵律 1**：以上部署動作我都不會自己做，會先給你本機可測版本、你點頭再推。
+
+## 8.1 上線後的實際位址（2026-08-01）
+
+| 東西 | 位址 |
+|---|---|
+| 網站（給同仁） | https://eason0728.github.io/mzt-loss/ |
+| GitHub repo | https://github.com/Eason0728/mzt-loss |
+| Apps Script 專案 | https://script.google.com/d/1oV07SWbdIeMeKAyJGfeaCw-akEwQEBHjaXes3u0wLm53hhzVLZmXMbyJ/edit |
+| Web App 部署 ID | `AKfycbzpCW2ZwSjX14D0Ry5rMnNmoaBr52VHDKWKiQlUjSW0zy1jdJGlaeRicgsvWn-LQqdNKA`（**永遠 redeploy 這個 ID，別建新的**） |
+| 資料試算表 | https://docs.google.com/spreadsheets/d/15-C5iOFt6jkRMAogPaojk7sxA-Ly-PDLEIi7u1jl4Rg/edit （腳本自動建立） |
+
+改後端的流程：改 `apps-script/Code.gs` → `clasp push -f` →
+`clasp deploy --deploymentId AKfycbzp… --description "說明"`。
+**部署生效有 20–40 秒延遲**，剛推完立刻測會拿到舊版本，別誤判成沒生效。
 
 ## 9. 已定案的決策紀錄
 
