@@ -137,6 +137,8 @@ li.is-off{opacity:.55}
 .rank .r-sub{font-size:12px;color:var(--muted);margin-top:2px}
 .rank .r-bar{height:5px;background:var(--green-soft);border-radius:3px;margin-top:5px;overflow:hidden}
 .rank .r-bar i{display:block;height:100%;background:var(--green);border-radius:3px}
+.rank .more{width:100%;appearance:none;background:none;border:0;font-family:inherit;font-size:14px;
+  color:var(--green);padding:8px 0;cursor:pointer;text-decoration:underline}
 
 .toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);z-index:99;
   background:var(--green-dark);color:#fff;font-size:15px;padding:11px 20px;border-radius:22px;

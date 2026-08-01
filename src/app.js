@@ -646,10 +646,13 @@ if (typeof document !== 'undefined') document.addEventListener('DOMContentLoaded
     return calc.dateRange(statKind, calc.ymd(new Date()));
   }
 
-  function fillRank(el, list) {
+  var itemRankOpen = false;
+
+  function fillRank(el, list, limit) {
     el.innerHTML = '';
     var top = list.length ? list[0].金額 : 0;
-    list.forEach(function (r) {
+    var shown = (limit && list.length > limit) ? list.slice(0, limit) : list;
+    shown.forEach(function (r) {
       var li = document.createElement('li');
       li.innerHTML =
         '<div class="r-top"><span class="r-name">' + r.名稱 + '</span><span class="r-amt">' + calc.money(r.金額) + '</span></div>' +
@@ -657,6 +660,15 @@ if (typeof document !== 'undefined') document.addEventListener('DOMContentLoaded
         '<div class="r-bar"><i style="width:' + (top ? Math.max(2, r.金額 / top * 100) : 0) + '%"></i></div>';
       el.appendChild(li);
     });
+    if (limit && list.length > limit) {
+      var more = document.createElement('li');
+      more.innerHTML = '<button type="button" class="more">顯示全部 ' + list.length + ' 項</button>';
+      more.querySelector('button').addEventListener('click', function () {
+        itemRankOpen = true;
+        renderStat();
+      });
+      el.appendChild(more);
+    }
   }
 
   function renderStat() {
@@ -676,7 +688,8 @@ if (typeof document !== 'undefined') document.addEventListener('DOMContentLoaded
       ? (sum.總金額 ? '上期沒有紀錄' : '')
       : '上期 ' + calc.money(prev.總金額) + '（' + (d >= 0 ? '+' : '') + calc.money(d).replace('$', '') + '）';
 
-    // 每日走勢
+    // 每日走勢（只有一天就不畫，否則會變成一整塊實心色塊）
+    $('s-chartblock').hidden = sum.每日.length < 2;
     var chart = $('s-chart'), max = 0;
     sum.每日.forEach(function (x) { if (x.金額 > max) max = x.金額; });
     chart.innerHTML = '';
@@ -691,12 +704,14 @@ if (typeof document !== 'undefined') document.addEventListener('DOMContentLoaded
     $('s-axis-b').textContent = rg.to.slice(5).replace('-', '/');
 
     fillRank($('s-cat'), sum.按品類);
-    fillRank($('s-item'), sum.按品名);
+    fillRank($('s-item'), sum.按品名, itemRankOpen ? 0 : 10);   // 品名可能上百項，先給前 10
     fillRank($('s-reason'), sum.按原因);
 
     var none = sum.筆數 === 0;
     $('s-empty').hidden = !none;
-    Array.prototype.forEach.call(document.querySelectorAll('#page-stat .block'), function (b) { b.hidden = none; });
+    Array.prototype.forEach.call(document.querySelectorAll('#page-stat .block'), function (b) {
+      b.hidden = none || (b.id === 's-chartblock' && sum.每日.length < 2);
+    });
     document.querySelector('#page-stat .btn-pair').hidden = none;
   }
 
