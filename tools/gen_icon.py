@@ -8,9 +8,10 @@
 上方墨竹亭竹葉 emblem、下方兩個字，只換底色與文字。
 emblem 直接從宿舍那顆抽 alpha 出來，幾何位置逐 px 相同，不是重畫一顆近似的。
 
-底色赭黃 #B8791F 是 Eason 2026-08-01 在磚紅／赭黃／紫藤三案裡選的：
-同族三顆（宿舍薄荷綠 #86CBBF、調撥深墨綠 #2F6E63、稽核藏藍 #1F3A5F）全是冷色，
-挑暖色最不會在桌面上誤點；本 app 的介面主色 #2f5d50 跟調撥太近，不能拿來當圖示。
+配色 2026-08-01 由 Eason 定案：墨竹亭薄荷綠 #86CBBF 底、竹葉維持白、文字赭黃 #B8791F。
+（先提過赭黃底＋白字，他改成這個組合並在看過 D／E／反轉三版後選 D。）
+已知取捨：底色與宿舍那顆相同，兩顆只靠文字色區分；且赭黃壓薄荷綠對比約 2:1，
+32px 分頁圖示的字會偏糊——這是明知後仍選定的方向，不要「順手修正」回高對比。
 
 產完把兩顆以 base64 data URI 內嵌進 src/index.html 的 <head>
 （有 `<!-- 耗損 icon -->` 標記防重複插入），再跑 build.py 就會帶進正式版與示範版。
@@ -26,8 +27,9 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DORM_ICON = os.path.expanduser('~/mala-dorm-contract/assets/icon-180.png')
 OUT_DIR = os.path.join(ROOT, 'assets')
 
-BG = (0xB8, 0x79, 0x1F)          # 赭黃
-FG = (0xFF, 0xFF, 0xFF)          # emblem 與文字都用白
+BG = (0x86, 0xCB, 0xBF)          # 墨竹亭薄荷綠（＝宿舍那顆的底色）
+EMBLEM_FG = (0xFF, 0xFF, 0xFF)   # 竹葉維持白
+TEXT_FG = (0xB8, 0x79, 0x1F)     # 文字赭黃
 TEXT = '耗損'
 
 # 宿舍那顆量出來的幾何（180 畫布）
@@ -60,13 +62,13 @@ def fit_font():
 
 def build_180():
     icon = Image.new('RGB', (180, 180), BG)
-    icon.paste(Image.new('RGB', (180, 180), FG), (0, 0), emblem_alpha())
+    icon.paste(Image.new('RGB', (180, 180), EMBLEM_FG), (0, 0), emblem_alpha())
 
     font, box = fit_font()
     draw = ImageDraw.Draw(icon)
     x = (180 - (box[2] - box[0])) / 2 - box[0]
     y = TEXT_TOP - box[1]
-    draw.text((x, y), TEXT, font=font, fill=FG, stroke_width=1, stroke_fill=FG)
+    draw.text((x, y), TEXT, font=font, fill=TEXT_FG, stroke_width=1, stroke_fill=TEXT_FG)
     return icon
 
 
