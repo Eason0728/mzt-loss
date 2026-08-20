@@ -400,6 +400,7 @@ if (typeof document !== 'undefined') document.addEventListener('DOMContentLoaded
       Array.prototype.forEach.call(document.querySelectorAll('.page'), function (p) { p.classList.remove('is-on'); });
       btn.classList.add('is-on');
       $('page-' + btn.dataset.tab).classList.add('is-on');
+      document.body.dataset.page = btn.dataset.tab;   // 換色靠這一行
       if (btn.dataset.tab === 'stat') renderStat();
       window.scrollTo(0, 0);
     });
@@ -788,6 +789,8 @@ if (typeof document !== 'undefined') document.addEventListener('DOMContentLoaded
   });
 
   $('s-print').addEventListener('click', function () { window.print(); });
+
+  document.body.dataset.page = 'log';   // 開頁預設在登記頁
 
   var saved = store.curStore();
   if (saved && STORES.indexOf(saved) >= 0) applyStore(saved);

@@ -21,6 +21,11 @@
   --danger-soft:#fceaea;
   --radius:10px;
 }
+/* 三個分頁各一色：切頁時只換這三個變數，頂部／頁籤／按鈕／金額卡／聚焦框全部自動跟著換。
+   刻意選同一個「深、濁、白字讀得清楚」的家族，不要變成彩虹。 */
+body[data-page="cost"]{--green:#2f4a6e;--green-dark:#23385a;--green-soft:#eaeff6}
+body[data-page="stat"]{--green:#7a5320;--green-dark:#5d3e17;--green-soft:#f5eee2}
+
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 [hidden]{display:none !important}   /* .row 的 display:flex 會蓋掉瀏覽器預設的 [hidden] */
 body{
@@ -768,6 +773,7 @@ if (typeof document !== 'undefined') document.addEventListener('DOMContentLoaded
       Array.prototype.forEach.call(document.querySelectorAll('.page'), function (p) { p.classList.remove('is-on'); });
       btn.classList.add('is-on');
       $('page-' + btn.dataset.tab).classList.add('is-on');
+      document.body.dataset.page = btn.dataset.tab;   // 換色靠這一行
       if (btn.dataset.tab === 'stat') renderStat();
       window.scrollTo(0, 0);
     });
@@ -1156,6 +1162,8 @@ if (typeof document !== 'undefined') document.addEventListener('DOMContentLoaded
   });
 
   $('s-print').addEventListener('click', function () { window.print(); });
+
+  document.body.dataset.page = 'log';   // 開頁預設在登記頁
 
   var saved = store.curStore();
   if (saved && STORES.indexOf(saved) >= 0) applyStore(saved);
