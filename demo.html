@@ -175,12 +175,12 @@ li.is-off{opacity:.55}
 .pick-box button:active{background:var(--green-soft);border-color:var(--green)}
 
 .storebar{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--line);
-  border-radius:var(--radius);padding:12px 13px;margin-top:16px;font-size:14px}
+  border-radius:var(--radius);padding:12px 13px;font-size:14px}
 .storebar span{flex:1}
 .storebar strong{color:var(--green-dark)}
 .storebar button{appearance:none;font-family:inherit;font-size:14px;background:#fff;color:var(--green);
   border:1px solid var(--line);border-radius:6px;padding:8px 14px;cursor:pointer;white-space:nowrap}
-.storebar-hint{margin-top:6px;color:var(--muted)}
+.storebar-hint{margin:6px 0 16px;color:var(--muted)}
 </style>
 
 <div id="store-pick" class="pick" hidden>
@@ -281,6 +281,11 @@ li.is-off{opacity:.55}
 </section>
 
 <section id="page-cost" class="page">
+  <div class="storebar">
+    <span>這台裝置目前是 <strong id="cur-store">—</strong></span>
+    <button type="button" id="change-store">更換</button>
+  </div>
+  <p class="hint storebar-hint">成本表三家店共用一份，改單價會三店一起生效。</p>
   <form id="cost-form" autocomplete="off">
     <h2 id="cost-title">新增品項</h2>
     <div class="field">
@@ -313,11 +318,6 @@ li.is-off{opacity:.55}
   <ul id="cost-list" class="item-list"></ul>
   <p id="cost-empty" class="empty">成本表還是空的，先新增第一個品項。</p>
 
-  <div class="storebar">
-    <span>這台裝置目前是 <strong id="cur-store">—</strong></span>
-    <button type="button" id="change-store">更換</button>
-  </div>
-  <p class="hint storebar-hint">成本表三家店共用一份，改單價會三店一起生效。</p>
 </section>
 
 <section id="page-stat" class="page">

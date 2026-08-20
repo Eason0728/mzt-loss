@@ -165,9 +165,9 @@ li.is-off{opacity:.55}
 .pick-box button:active{background:var(--green-soft);border-color:var(--green)}
 
 .storebar{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--line);
-  border-radius:var(--radius);padding:12px 13px;margin-top:16px;font-size:14px}
+  border-radius:var(--radius);padding:12px 13px;font-size:14px}
 .storebar span{flex:1}
 .storebar strong{color:var(--green-dark)}
 .storebar button{appearance:none;font-family:inherit;font-size:14px;background:#fff;color:var(--green);
   border:1px solid var(--line);border-radius:6px;padding:8px 14px;cursor:pointer;white-space:nowrap}
-.storebar-hint{margin-top:6px;color:var(--muted)}
+.storebar-hint{margin:6px 0 16px;color:var(--muted)}
