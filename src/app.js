@@ -1,7 +1,10 @@
 // 墨竹亭 光復店 耗損登記表
 // 設計約束：金額只在 calc.makeRecord() 算一次；歷史金額永不重算；品項一律用「名稱」當 key。
 
-var STORE_NAME = '墨竹亭光復';
+// 三店共用同一個網址；實際店別存在各自手機的 localStorage（裝置綁定）
+var STORES = ['墨竹亭光復', '墨竹亭金山', '墨竹亭六張犁'];
+var STORE_LABEL = { '墨竹亭光復': '光復店', '墨竹亭金山': '金山店', '墨竹亭六張犁': '六張犁店' };
+var STORE_NAME = '墨竹亭光復';   // 預設值，開頁時由 localStorage 覆蓋
 
 var CATEGORIES = ['肉類', '海鮮', '蔬菜', '豆製品・加工品', '乾貨・南北貨', '調味料', '飲品・酒水', '包材・耗材', '其他'];
 var REASONS = ['報廢', '過期', '備料失誤', '客訴重做', '試菜', '盤點差異', '其他'];
@@ -34,7 +37,7 @@ var calc = (function () {
     return {
       id: input.id || newId(d),
       日期: input.日期,
-      店別: STORE_NAME,
+      店別: input.店別 || STORE_NAME,
       品類: input.品類 || item.品類,
       品名: item.品名,
       耗損量: qty,
@@ -55,12 +58,13 @@ var calc = (function () {
     return true;
   }
 
-  function live(records, from, to) {
+  function live(records, from, to, store) {
     var out = [];
     for (var i = 0; i < records.length; i++) {
       var r = records[i];
       if (r.作廢 === true) continue;
       if (!inRange(r, from, to)) continue;
+      if (store && r.店別 !== store) continue;   // store 留空＝全部店
       out.push(r);
     }
     return out;
@@ -99,8 +103,8 @@ var calc = (function () {
   }
 
   // 統計一律直接加總每筆存下的「金額」，不回頭查成本表重算
-  function summarize(records, from, to) {
-    var rows = live(records, from, to), total = 0;
+  function summarize(records, from, to, store) {
+    var rows = live(records, from, to, store), total = 0;
     for (var i = 0; i < rows.length; i++) total = Math.round((total + rows[i].金額) * 100) / 100;
     return {
       總金額: total,
@@ -165,14 +169,15 @@ var calc = (function () {
   }
 
   return {
-    ymd: ymd, newId: newId, makeRecord: makeRecord, live: live,
+    ymd: ymd, newId: newId, makeRecord: makeRecord, live: live, STORES: STORES,
     rank: rank, daily: daily, summarize: summarize, dateRange: dateRange, money: money,
     shift: shift, days: days, prevRange: prevRange, csv: csv, CSV_COLS: CSV_COLS
   };
 })();
 
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { calc: calc, CATEGORIES: CATEGORIES, REASONS: REASONS, STORE_NAME: STORE_NAME };
+  module.exports = { calc: calc, CATEGORIES: CATEGORIES, REASONS: REASONS,
+    STORE_NAME: STORE_NAME, STORES: STORES, STORE_LABEL: STORE_LABEL };
 }
 
 /* ---------- 雲端設定 ---------- */
@@ -185,6 +190,7 @@ var store = {
   K_ITEMS: 'mztloss.items',
   K_LOSS: 'mztloss.loss',
   K_QUEUE: 'mztloss.queue',
+  K_STORE: 'mztloss.store',
   read: function (k) {
     try { return JSON.parse(localStorage.getItem(k) || '[]'); } catch (e) { return []; }
   },
@@ -196,7 +202,9 @@ var store = {
   loss: function () { return store.read(store.K_LOSS); },
   saveLoss: function (v) { return store.write(store.K_LOSS, v); },
   queue: function () { return store.read(store.K_QUEUE); },
-  saveQueue: function (v) { return store.write(store.K_QUEUE, v); }
+  saveQueue: function (v) { return store.write(store.K_QUEUE, v); },
+  curStore: function () { try { return localStorage.getItem(store.K_STORE) || ''; } catch (e) { return ''; } },
+  setStore: function (v) { try { localStorage.setItem(store.K_STORE, v); return true; } catch (e) { return false; } }
 };
 
 /* ---------- api：只負責送出與取回，不做任何計算 ---------- */
@@ -242,6 +250,51 @@ if (typeof document !== 'undefined') document.addEventListener('DOMContentLoaded
     t.hidden = false;
     clearTimeout(toast._t);
     toast._t = setTimeout(function () { t.hidden = true; }, 2200);
+  }
+
+  /* --- 店別：裝置綁定，一支手機記一家店 --- */
+  function applyStore(name) {
+    STORE_NAME = name;
+    store.setStore(name);
+    document.querySelector('.store').textContent = '墨竹亭 · ' + (STORE_LABEL[name] || name);
+    var cur = $('cur-store');
+    if (cur) cur.textContent = STORE_LABEL[name] || name;
+  }
+
+  function askStore(force) {
+    var box = $('pick-list');
+    box.innerHTML = '';
+    STORES.forEach(function (name) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = STORE_LABEL[name];
+      b.addEventListener('click', function () {
+        applyStore(name);
+        $('store-pick').hidden = true;
+        renderToday();
+        fillStoreSelect();
+        if (force) toast('已改成 ' + STORE_LABEL[name]);
+      });
+      box.appendChild(b);
+    });
+    $('store-pick').hidden = false;
+  }
+
+  // 只在開頁與換店時呼叫；一律把統計頁重設成「本店」，
+  // 不保留舊值——換了店卻還在看前一家的數字最容易誤判。
+  function fillStoreSelect() {
+    var el = $('s-store');
+    if (!el) return;
+    el.innerHTML = '';
+    var all = document.createElement('option');
+    all.value = ''; all.textContent = '全部三店';
+    el.appendChild(all);
+    STORES.forEach(function (name) {
+      var o = document.createElement('option');
+      o.value = name; o.textContent = STORE_LABEL[name];
+      el.appendChild(o);
+    });
+    el.value = STORE_NAME;              // 預設看自己這家店
   }
 
   /* --- 同步：待送佇列 --- */
@@ -457,6 +510,7 @@ if (typeof document !== 'undefined') document.addEventListener('DOMContentLoaded
 
     var rec = calc.makeRecord({
       日期: $('f-date').value,
+      店別: STORE_NAME,
       品類: $('f-cat').value,
       耗損量: qty,
       原因: $('f-reason').value,
@@ -480,13 +534,13 @@ if (typeof document !== 'undefined') document.addEventListener('DOMContentLoaded
   function renderToday() {
     var day = $('f-date').value || calc.ymd(new Date());
     var todayStr = calc.ymd(new Date());
-    var rows = records.filter(function (r) { return r.日期 === day; })
+    var rows = records.filter(function (r) { return r.日期 === day && r.店別 === STORE_NAME; })
       .sort(function (a, b) { return a.建立時間 < b.建立時間 ? 1 : -1; });
 
     document.querySelector('.today-head h2').textContent =
       (day === todayStr ? '今天這幾筆' : day.slice(5).replace('-', '/') + ' 這幾筆');
 
-    var sum = calc.summarize(rows, day, day);
+    var sum = calc.summarize(rows, day, day, STORE_NAME);
     $('today-sum').textContent = calc.money(sum.總金額);
 
     var ul = $('today-list');
@@ -574,6 +628,7 @@ if (typeof document !== 'undefined') document.addEventListener('DOMContentLoaded
     renderCost();
   });
 
+  $('change-store').addEventListener('click', function () { askStore(true); });
   $('c-search').addEventListener('input', renderCost);
 
   function renderCost() {
@@ -634,6 +689,7 @@ if (typeof document !== 'undefined') document.addEventListener('DOMContentLoaded
       renderStat();
     });
   });
+  $('s-store').addEventListener('change', renderStat);
   $('s-from').addEventListener('change', renderStat);
   $('s-to').addEventListener('change', renderStat);
 
@@ -674,9 +730,10 @@ if (typeof document !== 'undefined') document.addEventListener('DOMContentLoaded
   function renderStat() {
     var rg = statRange();
     if (!rg) return;
-    var sum = calc.summarize(records, rg.from, rg.to);
+    var who = $('s-store') ? $('s-store').value : STORE_NAME;   // 空字串＝全部三店
+    var sum = calc.summarize(records, rg.from, rg.to, who);
     var pv = calc.prevRange(rg.from, rg.to);
-    var prev = calc.summarize(records, pv.from, pv.to);
+    var prev = calc.summarize(records, pv.from, pv.to, who);
 
     $('s-range').textContent = rg.from.slice(5).replace('-', '/') +
       (rg.from === rg.to ? '' : '–' + rg.to.slice(5).replace('-', '/'));
@@ -718,7 +775,7 @@ if (typeof document !== 'undefined') document.addEventListener('DOMContentLoaded
   $('s-csv').addEventListener('click', function () {
     var rg = statRange();
     if (!rg) return;
-    var rows = calc.live(records, rg.from, rg.to);   // 作廢的不匯出
+    var rows = calc.live(records, rg.from, rg.to, $('s-store').value);   // 作廢的不匯出
     if (!rows.length) return toast('這段期間沒有資料', true);
     var blob = new Blob([calc.csv(rows)], { type: 'text/csv;charset=utf-8' });
     var a = document.createElement('a');
@@ -731,6 +788,11 @@ if (typeof document !== 'undefined') document.addEventListener('DOMContentLoaded
   });
 
   $('s-print').addEventListener('click', function () { window.print(); });
+
+  var saved = store.curStore();
+  if (saved && STORES.indexOf(saved) >= 0) applyStore(saved);
+  else askStore(false);
+  fillStoreSelect();
 
   renderToday();
   renderCost();

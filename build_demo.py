@@ -76,6 +76,7 @@ def main() -> None:
     localStorage.setItem('__K__items', JSON.stringify(ITEMS));
     localStorage.setItem('__K__loss', JSON.stringify(LOSS));
     localStorage.setItem('__K__queue', '[]');
+    localStorage.setItem('__K__store', '墨竹亭光復');
     localStorage.setItem('__K__demo', '1');
   }
   // 示範版：後端改成本機模擬，完全不連雲端
