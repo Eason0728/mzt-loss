@@ -26,9 +26,13 @@ body{
 }
 h1,h2{margin:0;font-weight:600}
 
-.top{background:var(--green);color:#fff;padding:14px 18px calc(14px + env(safe-area-inset-top)) 18px;padding-top:calc(14px + env(safe-area-inset-top))}
+.top{background:var(--green);color:#fff;padding:14px 18px;
+  padding-top:calc(14px + env(safe-area-inset-top));
+  display:flex;align-items:center;gap:13px}
+.brand{height:42px;width:auto;flex:0 0 auto;display:block}
 .top h1{font-size:19px;letter-spacing:.5px}
 .store{margin:2px 0 0;font-size:13px;opacity:.85}
+.top-text{min-width:0}
 
 .tabs{display:flex;background:var(--green-dark);position:sticky;top:0;z-index:20}
 .tab{flex:1;appearance:none;background:none;border:0;border-bottom:3px solid transparent;
