@@ -59,7 +59,9 @@ eq('只看金山', calc.summarize(S,'2026-08-01','2026-08-01','墨竹亭金山')
 eq('只看金山筆數(排除作廢)', calc.summarize(S,'2026-08-01','2026-08-01','墨竹亭金山').筆數, 1);
 eq('店別留空＝全部三店', calc.summarize(S,'2026-08-01','2026-08-01','').總金額, 700);
 eq('不存在的店＝0', calc.summarize(S,'2026-08-01','2026-08-01','墨竹亭不存在').總金額, 0);
-eq('三店清單', require(APP_PATH).STORES, ['墨竹亭光復','墨竹亭金山','墨竹亭六張犁']);
+eq('門市清單', require(APP_PATH).STORES, ['墨竹亭光復','墨竹亭金山','墨竹亭六張犁','麻的小辛辣美村']);
+eq('每家店都有顯示名稱', require(APP_PATH).STORES.every(s => !!require(APP_PATH).STORE_LABEL[s]), true);
+eq('店別值都帶品牌前綴', require(APP_PATH).STORES.every(s => s.startsWith('墨竹亭') || s.startsWith('麻的小辛辣')), true);
 
 // 期間
 eq('本月起日', calc.dateRange('month','2026-08-15').from, '2026-08-01');
