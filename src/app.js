@@ -1,13 +1,12 @@
-// 墨竹亭｜耗損登記表（光復／金山／六張犁三店共用）
+// 墨竹亭｜耗損登記表（光復／金山／六張犁／台中美村 四店共用）
 // 設計約束：金額只在 calc.makeRecord() 算一次；歷史金額永不重算；品項一律用「名稱」當 key。
 
-// 三店共用同一個網址；實際店別存在各自手機的 localStorage（裝置綁定）
-// ⚠ 美村是「麻的小辛辣」，不是墨竹亭——本系統從 2026-08-20 起跨兩個品牌。
-// 店別值一律帶品牌前綴，之後統計／匯出才分得出是哪一家公司的耗損。
-var STORES = ['墨竹亭光復', '墨竹亭金山', '墨竹亭六張犁', '麻的小辛辣美村'];
+// 四店共用同一個網址；實際店別存在各自手機的 localStorage（裝置綁定）
+// 全部都是墨竹亭。店別值帶品牌前綴，匯出到試算表時一眼看得出是哪家公司。
+var STORES = ['墨竹亭光復', '墨竹亭金山', '墨竹亭六張犁', '墨竹亭美村'];
 var STORE_LABEL = {
-  '墨竹亭光復': '墨竹亭 光復店', '墨竹亭金山': '墨竹亭 金山店',
-  '墨竹亭六張犁': '墨竹亭 六張犁店', '麻的小辛辣美村': '小辛辣 台中美村店'
+  '墨竹亭光復': '光復店', '墨竹亭金山': '金山店',
+  '墨竹亭六張犁': '六張犁店', '墨竹亭美村': '台中美村店'
 };
 var STORE_NAME = '墨竹亭光復';   // 預設值，開頁時由 localStorage 覆蓋
 
@@ -261,7 +260,7 @@ if (typeof document !== 'undefined') document.addEventListener('DOMContentLoaded
   function applyStore(name) {
     STORE_NAME = name;
     store.setStore(name);
-    document.querySelector('.store').textContent = STORE_LABEL[name] || name;
+    document.querySelector('.store').textContent = '墨竹亭 · ' + (STORE_LABEL[name] || name);
     var cur = $('cur-store');
     if (cur) cur.textContent = STORE_LABEL[name] || name;
   }
