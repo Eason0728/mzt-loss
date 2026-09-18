@@ -109,8 +109,8 @@ def money(text):
     return float(re.sub(r'[^0-9.]', '', text) or 0)
 
 
-def log(page, name, qty, reason='報廢'):
-    """走完整的 UI 流程登記一筆。"""
+def log(page, name, qty, reason='報廢', note=''):
+    """走完整的 UI 流程登記一筆。原因選「其他」時 note 是必填的原因說明。"""
     page.fill('#f-name', name)
     page.dispatch_event('#f-name', 'input')
     page.wait_for_timeout(200)
@@ -118,6 +118,8 @@ def log(page, name, qty, reason='報廢'):
     page.fill('#f-qty', str(qty))
     page.dispatch_event('#f-qty', 'input')
     page.select_option('#f-reason', reason)
+    if note:
+        page.fill('#f-reasonnote', note)
     page.click('#log-form button[type=submit]')
     page.wait_for_timeout(600)
 
@@ -294,6 +296,41 @@ def main() -> int:
               page.locator('#s-item li.can-open', has_text='雞腿肉').first.locator('.subrank').is_visible(), False)
         check('品類排行不給展開', page.locator('#s-cat li.can-open').count(), 0)
         check('原因排行不給展開', page.locator('#s-reason li.can-open').count(), 0)
+
+        # ── 展開層的「其他」要列出現場填的說明 ────────────
+        page.click('.tab[data-tab=log]')
+        page.wait_for_timeout(300)
+        log(page, '雞胸肉', 1, '其他', '掉在地上')
+        log(page, '雞胸肉', 1, '其他', '<b>冰箱跳電</b>')   # 故意帶標籤：要原樣顯示，不能被當成網頁語法
+        log(page, '雞胸肉', 1, '其他', '掉在地上')
+        page.click('.tab[data-tab=stat]')
+        page.wait_for_timeout(600)
+        row = page.locator('#s-item li.can-open', has_text='雞胸肉').first
+        row.locator('.r-head').click()
+        page.wait_for_timeout(200)
+        other = row.locator('.subrank > li', has_text='其他').first
+        check('其他底下列出說明', other.locator('.r-notes li').count(), 2)
+        check('重複的說明合併並標筆數', other.locator('.r-notes li').first.inner_text().replace('\n', ''), '掉在地上2 筆')
+        check('說明原樣顯示不被當網頁語法', other.locator('.r-notes li').nth(1).inner_text(), '<b>冰箱跳電</b>')
+        check('說明裡的標籤沒有變成粗體', other.locator('.r-notes b').count(), 0)
+
+        # ── 先選其他打了說明、又改選報廢：殘留的說明不能存進去 ──
+        page.click('.tab[data-tab=log]')
+        page.wait_for_timeout(300)
+        before = len(back.loss)
+        page.fill('#f-name', '雞腿肉')
+        page.dispatch_event('#f-name', 'input')
+        page.wait_for_timeout(200)
+        page.locator('#ac-list li', has_text='雞腿肉').first.click()
+        page.fill('#f-qty', '1')
+        page.dispatch_event('#f-qty', 'input')
+        page.select_option('#f-reason', '其他')
+        page.fill('#f-reasonnote', '打錯的說明')
+        page.select_option('#f-reason', '報廢')
+        page.click('#log-form button[type=submit]')
+        page.wait_for_timeout(1200)
+        check('改選報廢後照樣送得出去', len(back.loss), before + 1)
+        check('改選報廢後殘留的說明沒存', back.loss[-1]['原因說明'] if len(back.loss) > before else None, '')
 
         b.close()
 

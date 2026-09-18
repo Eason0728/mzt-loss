@@ -50,7 +50,7 @@ var calc = (function () {
       單位成本: cost,
       金額: amount,
       原因: input.原因,
-      原因說明: input.原因說明 || '',
+      原因說明: input.原因 === '其他' ? (input.原因說明 || '') : '',   // 說明欄只屬於「其他」；改選別的原因時殘留的字不存
       備註: input.備註 || '',
       建立時間: d.toISOString(),
       作廢: false
@@ -96,6 +96,19 @@ var calc = (function () {
     return list;
   }
 
+  // 現場填的「原因說明」去重計數：同一句話出現幾次就是幾筆，多的排前面，同樣多照先出現的順序
+  function notes(records) {
+    var map = {}, list = [];
+    for (var i = 0; i < records.length; i++) {
+      var t = String(records[i].原因說明 || '').trim();
+      if (!t) continue;
+      if (!map[t]) { map[t] = { 說明: t, 筆數: 0, 順序: list.length }; list.push(map[t]); }
+      map[t].筆數 += 1;
+    }
+    list.sort(function (a, b) { return b.筆數 - a.筆數 || a.順序 - b.順序; });
+    return list.map(function (x) { return { 說明: x.說明, 筆數: x.筆數 }; });
+  }
+
   function daily(records, from, to) {
     var map = {};
     for (var i = 0; i < records.length; i++) {
@@ -114,11 +127,21 @@ var calc = (function () {
   function summarize(records, from, to, store) {
     var rows = live(records, from, to, store), total = 0;
     for (var i = 0; i < rows.length; i++) total = Math.round((total + rows[i].金額) * 100) / 100;
+    var byItem = rank(rows, '品名', '原因');   // 每個品名再拆成各耗損原因（統計頁可展開）
+    // 只有「其他」有說明欄（登記頁選其他才會出現、而且必填），別的原因就算殘留文字也不顯示
+    byItem.forEach(function (it) {
+      it.明細.forEach(function (m) {
+        if (m.名稱 !== '其他') return;
+        m.說明 = notes(rows.filter(function (r) {
+          return (r.品名 || '（未填）') === it.名稱 && r.原因 === '其他';
+        }));
+      });
+    });
     return {
       總金額: total,
       筆數: rows.length,
       按品類: rank(rows, '品類'),
-      按品名: rank(rows, '品名', '原因'),   // 每個品名再拆成各耗損原因（統計頁可展開）
+      按品名: byItem,
       按原因: rank(rows, '原因'),
       每日: (from && to) ? daily(rows, from, to) : []
     };
@@ -178,7 +201,7 @@ var calc = (function () {
 
   return {
     ymd: ymd, newId: newId, makeRecord: makeRecord, live: live, STORES: STORES,
-    rank: rank, daily: daily, summarize: summarize, dateRange: dateRange, money: money,
+    rank: rank, notes: notes, daily: daily, summarize: summarize, dateRange: dateRange, money: money,
     shift: shift, days: days, prevRange: prevRange, csv: csv, CSV_COLS: CSV_COLS
   };
 })();
@@ -723,6 +746,21 @@ if (typeof document !== 'undefined') document.addEventListener('DOMContentLoaded
       li.innerHTML =
         '<div class="r-top"><span class="r-name">' + x.名稱 + '</span><span class="r-amt">' + calc.money(x.金額) + '</span></div>' +
         '<div class="r-sub">' + x.佔比 + '%　' + x.筆數 + ' 筆</div>';
+      if (x.說明 && x.說明.length) {
+        var nl = document.createElement('ul');
+        nl.className = 'r-notes';
+        x.說明.forEach(function (n) {
+          var ni = document.createElement('li');
+          ni.textContent = n.說明;
+          if (n.筆數 > 1) {
+            var c = document.createElement('small');
+            c.textContent = n.筆數 + ' 筆';
+            ni.appendChild(c);
+          }
+          nl.appendChild(ni);
+        });
+        li.appendChild(nl);
+      }
       ul.appendChild(li);
     });
     return ul;

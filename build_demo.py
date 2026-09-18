@@ -37,6 +37,11 @@ QTY = {"包": [0.5, 1, 1.5, 2, 3], "公斤": [0.3, 0.5, 0.8, 1.2], "斤": [0.5, 
        "兩": [0.5, 1], "桶": [1], "瓶": [1, 2], "罐": [1], "個": [10, 20, 30, 50]}
 
 TODAY = date(2026, 8, 1)
+# 「其他」要附說明才看得出統計頁展開的效果。固定每 9 筆改一筆，不從亂數抽，
+# 這樣亂數序列不變——品項、數量、金額、作廢都跟改之前一模一樣（教學長圖靠這批資料截圖）
+OTHER_NOTES = ["掉在地上", "冰箱跳電退冰", "掉在地上", "外送單取消", "包裝破損漏出"]
+# 改了假資料就換這個值：舊訪客的瀏覽器才會重新灌一次示範資料（不換會一直看到舊的）
+DATA_VER = "2026-09-18"
 START = date(2026, 7, 1)
 
 
@@ -54,12 +59,15 @@ def main() -> None:
             qty = random.choice(QTY[unit])
             seq += 1
             reason = random.choice(REASONS)
+            note = "湯底試味道" if reason == "試菜" else ""
+            if seq % 9 == 0:
+                reason, note = "其他", OTHER_NOTES[seq // 9 % len(OTHER_NOTES)]
             loss.append({
                 "id": f"L-{d:%Y%m%d}{9 + seq % 12:02d}{seq % 60:02d}{seq % 60:02d}-demo{seq:04d}",
                 "日期": d.isoformat(), "店別": "墨竹亭光復", "品類": cat, "品名": name,
                 "耗損量": qty, "單位": unit, "單位成本": price,
                 "金額": round(qty * price, 2), "原因": reason,
-                "原因說明": "湯底試味道" if reason == "試菜" else "",
+                "原因說明": note,
                 "備註": "", "建立時間": f"{d.isoformat()}T{9 + seq % 12:02d}:00:00.000Z",
                 "作廢": random.random() < 0.04,
             })
@@ -72,12 +80,12 @@ def main() -> None:
 (function () {
   var ITEMS = __ITEMS__;
   var LOSS = __LOSS__;
-  if (!localStorage.getItem('__K__demo')) {
+  if (localStorage.getItem('__K__demo') !== '__VER__') {
     localStorage.setItem('__K__items', JSON.stringify(ITEMS));
     localStorage.setItem('__K__loss', JSON.stringify(LOSS));
     localStorage.setItem('__K__queue', '[]');
     localStorage.setItem('__K__store', '墨竹亭光復');
-    localStorage.setItem('__K__demo', '1');
+    localStorage.setItem('__K__demo', '__VER__');
   }
   // 示範版：後端改成本機模擬，完全不連雲端
   API_URL = '(demo)';
@@ -102,14 +110,15 @@ def main() -> None:
 })();
 </script>
 """
-    demo = demo.replace("__K__", KEY)
+    demo = demo.replace("__K__", KEY).replace("__VER__", DATA_VER)
     demo = demo.replace("__ITEMS__", json.dumps(items, ensure_ascii=False))
     demo = demo.replace("__LOSS__", json.dumps(loss, ensure_ascii=False))
     OUT.write_text(html + demo, encoding="utf-8")
 
     total = sum(r["金額"] for r in loss if not r["作廢"])
     print(f"{OUT}\n品項 {len(items)} 筆｜耗損紀錄 {len(loss)} 筆"
-          f"（作廢 {sum(1 for r in loss if r['作廢'])} 筆）｜7/1–8/1 合計 ${total:,.0f}")
+          f"（作廢 {sum(1 for r in loss if r['作廢'])} 筆，其他 {sum(1 for r in loss if r['原因'] == '其他')} 筆）"
+          f"｜7/1–8/1 合計 ${total:,.0f}")
 
 
 if __name__ == "__main__":
