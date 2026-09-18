@@ -143,10 +143,10 @@
 |---|---|---|
 | `store` | localStorage 讀寫：成本表快取、待送佇列、草稿 | 否 |
 | `api` | 包 fetch、逾時、重試、離線判斷 | 否 |
-| **`calc`** | **`makeRecord()`（唯一算金額的地方）**、`summarize()` 統計聚合、`rank()` 排行 | **是（全部）** |
+| **`calc`** | **`makeRecord()`（唯一算金額的地方）**、`summarize()` 統計聚合、`rank(records, field, subField)` 排行（給 subField 就多算一層明細） | **是（全部）** |
 | `ui-log` | 登記頁：品名提示、帶入、送出 | 否 |
 | `ui-cost` | 成本設定頁 | 否 |
-| `ui-stats` | 統計頁：期間切換、三張排行、走勢、CSV、列印 | 否 |
+| `ui-stats` | 統計頁：期間切換、三張排行（品名可展開看耗損原因）、走勢、CSV、列印 | 否 |
 
 `calc` 全部寫成不碰 DOM 的純函式，測試才跑得快、金額邏輯才守得住。
 

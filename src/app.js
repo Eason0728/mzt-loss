@@ -75,13 +75,15 @@ var calc = (function () {
     return out;
   }
 
-  function rank(records, field) {
-    var map = {}, total = 0;
+  // subField 給了就多算一層：每項掛一個「明細」陣列（同一函式遞迴，佔比是在該項內部的佔比）
+  function rank(records, field, subField) {
+    var map = {}, groups = {}, total = 0;
     for (var i = 0; i < records.length; i++) {
       var r = records[i], k = r[field] || '（未填）';
-      if (!map[k]) map[k] = { 名稱: k, 金額: 0, 筆數: 0 };
+      if (!map[k]) { map[k] = { 名稱: k, 金額: 0, 筆數: 0 }; groups[k] = []; }
       map[k].金額 = Math.round((map[k].金額 + r.金額) * 100) / 100;
       map[k].筆數 += 1;
+      if (subField) groups[k].push(r);
       total = Math.round((total + r.金額) * 100) / 100;
     }
     var list = [];
@@ -89,6 +91,7 @@ var calc = (function () {
     list.sort(function (a, b) { return b.金額 - a.金額; });
     for (var j = 0; j < list.length; j++) {
       list[j].佔比 = total ? Math.round(list[j].金額 / total * 1000) / 10 : 0;
+      if (subField) list[j].明細 = rank(groups[list[j].名稱], subField);
     }
     return list;
   }
@@ -115,7 +118,7 @@ var calc = (function () {
       總金額: total,
       筆數: rows.length,
       按品類: rank(rows, '品類'),
-      按品名: rank(rows, '品名'),
+      按品名: rank(rows, '品名', '原因'),   // 每個品名再拆成各耗損原因（統計頁可展開）
       按原因: rank(rows, '原因'),
       每日: (from && to) ? daily(rows, from, to) : []
     };
@@ -695,7 +698,7 @@ if (typeof document !== 'undefined') document.addEventListener('DOMContentLoaded
       renderStat();
     });
   });
-  $('s-store').addEventListener('change', renderStat);
+  $('s-store').addEventListener('change', function () { itemOpen = {}; renderStat(); });
   $('s-from').addEventListener('change', renderStat);
   $('s-to').addEventListener('change', renderStat);
 
@@ -709,17 +712,54 @@ if (typeof document !== 'undefined') document.addEventListener('DOMContentLoaded
   }
 
   var itemRankOpen = false;
+  var itemOpen = {};      // 品名 → 展開中。存在變數裡，重畫統計不會把展開的收回去（換店才清掉）
 
-  function fillRank(el, list, limit) {
+  // 展開後的耗損原因清單：只有名稱／金額／佔比／筆數，不畫條狀圖（一列裡兩層條會看不出主次）
+  function subRank(list) {
+    var ul = document.createElement('ul');
+    ul.className = 'subrank';
+    list.forEach(function (x) {
+      var li = document.createElement('li');
+      li.innerHTML =
+        '<div class="r-top"><span class="r-name">' + x.名稱 + '</span><span class="r-amt">' + calc.money(x.金額) + '</span></div>' +
+        '<div class="r-sub">' + x.佔比 + '%　' + x.筆數 + ' 筆</div>';
+      ul.appendChild(li);
+    });
+    return ul;
+  }
+
+  // expandable＝這份排行的每一項可以點開看下一層（目前只有「按品名」用，展開的是耗損原因）
+  function fillRank(el, list, limit, expandable) {
     el.innerHTML = '';
     var top = list.length ? list[0].金額 : 0;
     var shown = (limit && list.length > limit) ? list.slice(0, limit) : list;
     shown.forEach(function (r) {
       var li = document.createElement('li');
-      li.innerHTML =
+      var canOpen = !!(expandable && r.明細 && r.明細.length);
+      var body =
         '<div class="r-top"><span class="r-name">' + r.名稱 + '</span><span class="r-amt">' + calc.money(r.金額) + '</span></div>' +
-        '<div class="r-sub">' + r.佔比 + '%　' + r.筆數 + ' 筆</div>' +
+        '<div class="r-sub">' + r.佔比 + '%　' + r.筆數 + ' 筆' +
+        (canOpen ? '<span class="r-hint">' + r.明細.length + ' 個原因</span>' : '') + '</div>' +
         '<div class="r-bar"><i style="width:' + (top ? Math.max(2, r.金額 / top * 100) : 0) + '%"></i></div>';
+      if (!canOpen) {
+        li.innerHTML = body;
+      } else {
+        // 展開／收合只動這一列的 class，不重畫整頁——重畫會把捲動位置彈回頂端
+        li.className = 'can-open' + (itemOpen[r.名稱] ? ' is-open' : '');
+        var head = document.createElement('button');
+        head.type = 'button';
+        head.className = 'r-head';
+        head.setAttribute('aria-expanded', itemOpen[r.名稱] ? 'true' : 'false');
+        head.innerHTML = body;
+        head.addEventListener('click', function () {
+          var nowOpen = !itemOpen[r.名稱];
+          itemOpen[r.名稱] = nowOpen;
+          li.classList.toggle('is-open', nowOpen);
+          head.setAttribute('aria-expanded', nowOpen ? 'true' : 'false');
+        });
+        li.appendChild(head);
+        li.appendChild(subRank(r.明細));
+      }
       el.appendChild(li);
     });
     if (limit && list.length > limit) {
@@ -767,7 +807,7 @@ if (typeof document !== 'undefined') document.addEventListener('DOMContentLoaded
     $('s-axis-b').textContent = rg.to.slice(5).replace('-', '/');
 
     fillRank($('s-cat'), sum.按品類);
-    fillRank($('s-item'), sum.按品名, itemRankOpen ? 0 : 10);   // 品名可能上百項，先給前 10
+    fillRank($('s-item'), sum.按品名, itemRankOpen ? 0 : 10, true);   // 品名可能上百項，先給前 10；可點開看各耗損原因
     fillRank($('s-reason'), sum.按原因);
 
     var none = sum.筆數 === 0;

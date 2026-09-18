@@ -259,6 +259,42 @@ def main() -> int:
         check('重整後不再跳選店', page.is_visible('#store-pick'), False)
         check('重整後仍是六張犁', page.inner_text('.store'), '墨竹亭 · 台北六張犁店')
 
+        # ── 按品名點開看耗損原因 ──────────────────────────
+        page.click('.tab[data-tab=log]')
+        page.wait_for_timeout(300)
+        log(page, '雞腿肉', 2, '報廢')       # 195 x 2 = 390
+        log(page, '雞腿肉', 1, '過期')       # 195
+        page.click('.tab[data-tab=stat]')
+        page.wait_for_timeout(400)
+        page.click('#s-seg button[data-k=today]')
+        page.wait_for_timeout(600)
+        row = page.locator('#s-item li.can-open', has_text='雞腿肉').first
+        check('品名列標了有幾個原因', row.locator('.r-hint').inner_text(), '2 個原因')
+        check('原因清單預設收著', row.locator('.subrank').is_visible(), False)
+        row.locator('.r-head').click()
+        page.wait_for_timeout(200)
+        check('點一下展開', row.locator('.subrank').is_visible(), True)
+        check('展開看到兩個原因', row.locator('.subrank .r-name').all_inner_texts(), ['報廢', '過期'])
+        check('原因金額是該品名裡的', [money(x) for x in row.locator('.subrank .r-amt').all_inner_texts()], [390.0, 195.0])
+        check('原因佔比是品名內部的', row.locator('.subrank li').first.locator('.r-sub').inner_text(), '66.7%　1 筆')
+        check('展開狀態有寫進 aria', row.locator('.r-head').get_attribute('aria-expanded'), 'true')
+        row.locator('.r-head').click()
+        page.wait_for_timeout(200)
+        check('再點一下收回去', row.locator('.subrank').is_visible(), False)
+
+        row.locator('.r-head').click()
+        page.wait_for_timeout(200)
+        page.click('#s-seg button[data-k=week]')
+        page.wait_for_timeout(600)
+        check('換期間重畫不會把展開收掉',
+              page.locator('#s-item li.can-open', has_text='雞腿肉').first.locator('.subrank').is_visible(), True)
+        page.select_option('#s-store', '')
+        page.wait_for_timeout(600)
+        check('換店要清掉展開狀態',
+              page.locator('#s-item li.can-open', has_text='雞腿肉').first.locator('.subrank').is_visible(), False)
+        check('品類排行不給展開', page.locator('#s-cat li.can-open').count(), 0)
+        check('原因排行不給展開', page.locator('#s-reason li.can-open').count(), 0)
+
         b.close()
 
     bad = 0

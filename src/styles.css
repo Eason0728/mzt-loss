@@ -149,6 +149,22 @@ li.is-off{opacity:.55}
 .rank .more{width:100%;appearance:none;background:none;border:0;font-family:inherit;font-size:14px;
   color:var(--green);padding:8px 0;cursor:pointer;text-decoration:underline}
 
+/* 按品名可點開看耗損原因。顯示與否只靠 li.is-open 這個 class，
+   不用 [hidden]——.r-top 是 display:flex，hidden 會被蓋過去（踩過的坑） */
+.rank .r-head{display:block;width:100%;appearance:none;background:none;border:0;padding:0;
+  font-family:inherit;color:inherit;text-align:left;cursor:pointer}
+.rank .r-head:focus-visible{outline:2px solid var(--green);outline-offset:3px;border-radius:4px}
+.rank .r-hint{margin-left:8px}
+.rank .r-hint::after{content:'▾';margin-left:3px}
+.rank li.is-open .r-hint::after{content:'▴'}
+.rank .subrank{display:none;list-style:none;margin:7px 0 2px;padding:0 0 0 11px;
+  border-left:2px solid var(--green-soft)}
+.rank li.is-open .subrank{display:block}
+.rank .subrank li{padding:4px 0;border-top:0}
+.rank .subrank .r-name,.rank .subrank .r-amt{font-size:13px}
+.rank .subrank .r-amt{font-weight:500}
+.rank .subrank .r-sub{font-size:11px;margin-top:1px}
+
 .toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);z-index:99;
   background:var(--green-dark);color:#fff;font-size:15px;padding:11px 20px;border-radius:22px;
   box-shadow:0 4px 16px rgba(0,0,0,.2);max-width:88vw;text-align:center}
