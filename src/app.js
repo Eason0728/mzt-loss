@@ -331,13 +331,25 @@ if (typeof document !== 'undefined') document.addEventListener('DOMContentLoaded
   /* --- 同步：待送佇列 --- */
   var flushing = false;
   var okTimer = null;
+  var syncFailed = false;   // 開頁沒抓到雲端資料：畫面上是這支裝置的舊快取
+  var booting = false;      // 正在重新連線
 
   function syncUI(justSynced) {
     var bar = $('sync');
+    var btn = $('sync-btn');
     if (pending.length) {
       bar.hidden = false;
       bar.className = 'sync';
+      btn.textContent = '立即重送';
       $('sync-text').textContent = '有 ' + pending.length + ' 筆還沒上傳' + (flushing ? '，上傳中…' : '');
+      return;
+    }
+    // 沒抓到雲端資料一定要說出來——安靜地顯示舊快取，現場會以為別人登記的不見了
+    if (syncFailed) {
+      bar.hidden = false;
+      bar.className = 'sync bad';
+      btn.textContent = booting ? '連線中…' : '重新連線';
+      $('sync-text').textContent = '沒連上雲端，畫面是舊資料';
       return;
     }
     if (justSynced) {
@@ -345,10 +357,11 @@ if (typeof document !== 'undefined') document.addEventListener('DOMContentLoaded
       bar.className = 'sync ok';
       $('sync-text').textContent = '已全部上傳到雲端';
       clearTimeout(okTimer);
-      okTimer = setTimeout(function () { bar.hidden = true; }, 2500);
+      okTimer = setTimeout(function () { bar.hidden = true; bar.className = 'sync'; }, 2500);
       return;
     }
     bar.hidden = true;
+    bar.className = 'sync';   // 收起來時把狀態色歸位，下次不會閃出上一次的紅／綠
   }
 
   function enqueue(job) {
@@ -380,11 +393,17 @@ if (typeof document !== 'undefined') document.addEventListener('DOMContentLoaded
     });
   }
 
-  $('sync-btn').addEventListener('click', function () { flush(false); });
-  window.addEventListener('online', function () { flush(true); });
+  $('sync-btn').addEventListener('click', function () {
+    if (syncFailed) { if (!booting) boot(); return; }
+    flush(false);
+  });
+  window.addEventListener('online', function () { if (syncFailed) boot(); else flush(true); });
 
   /* --- 開頁：先用快取畫面，再跟雲端對齊 --- */
   function boot() {
+    if (booting) return;
+    booting = true;
+    syncUI();
     api.post({ action: 'bootstrap' }).then(function (d) {
       items = d.items || [];
       store.saveItems(items);
@@ -399,8 +418,12 @@ if (typeof document !== 'undefined') document.addEventListener('DOMContentLoaded
       store.saveLoss(records);
       renderToday();
       if (document.querySelector('.page.is-on').id === 'page-stat') renderStat();
+      syncFailed = false; booting = false;
+      syncUI();
     }).catch(function () {
-      // 離線或後端還沒授權：安靜地用本機快取，不打擾現場
+      // 離線、逾時或後端還沒授權：本機快取照用，但畫面要講明白這不是最新的
+      syncFailed = true; booting = false;
+      syncUI();
     });
     flush(true);
   }

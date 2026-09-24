@@ -332,6 +332,22 @@ def main() -> int:
         check('改選報廢後照樣送得出去', len(back.loss), before + 1)
         check('改選報廢後殘留的說明沒存', back.loss[-1]['原因說明'] if len(back.loss) > before else None, '')
 
+        # ── 開頁抓不到雲端：要明講畫面是舊的，不能安靜裝沒事 ──────
+        back.offline = True
+        page.reload()
+        page.wait_for_timeout(1500)
+        check('抓不到雲端會跳警示列', page.is_visible('#sync'), True)
+        check('警示列是紅的', 'bad' in (page.get_attribute('#sync', 'class') or ''), True)
+        check('講明白畫面是舊資料', '沒連上雲端' in page.inner_text('#sync'), True)
+        check('按鈕變成重新連線', page.inner_text('#sync-btn'), '重新連線')
+        check('斷線時舊快取照樣看得到', page.locator('#today-list li').count() > 0, True)
+
+        back.offline = False
+        page.click('#sync-btn')
+        page.wait_for_timeout(1500)
+        check('重新連線後警示收掉', page.is_visible('#sync'), False)
+        check('警示的紅色也歸位', 'bad' in (page.get_attribute('#sync', 'class') or ''), False)
+
         b.close()
 
     bad = 0
