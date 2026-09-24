@@ -139,6 +139,9 @@ def main() -> int:
         page.locator('#pick-list button', has_text='新竹光復店').click()
         page.wait_for_timeout(1200)
         check('標題顯示所選門市', page.inner_text('.store'), '墨竹亭 · 新竹光復店')
+        ver = page.inner_text('.ver')
+        check('頁尾有版本號', ver.startswith('版本 20'), True)
+        check('版本號已被 build 換掉', '/*VERSION*/' in ver, False)
 
         # ── 品項記憶：打字提示與自動帶入 ──────────────────
         page.fill('#f-name', '雞')

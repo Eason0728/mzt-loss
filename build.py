@@ -4,6 +4,7 @@
 src/ 是正本。根目錄 index.html 是產出物，永遠不要手改。
 用法：python3 build.py
 """
+from datetime import datetime
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
@@ -22,6 +23,11 @@ def main() -> None:
         if marker not in html:
             raise SystemExit(f"src/index.html 少了 {marker} 標記，無法內嵌 {name}")
         html = html.replace(marker, payload, 1)
+
+    # 版本＝建置當下的時間。現場念得出來，就不必猜手機是不是快取到舊版。
+    if "/*VERSION*/" not in html:
+        raise SystemExit("src/index.html 少了 /*VERSION*/ 標記，頁尾版本號會消失")
+    html = html.replace("/*VERSION*/", datetime.now().strftime("%Y-%m-%d %H%M"), 1)
 
     if "</script" in js or "</style" in css:
         raise SystemExit("CSS/JS 內含結束標籤字串，內嵌後會壞掉")
