@@ -30,6 +30,7 @@ ITEMS = [
     {'品名': '雞胸肉', '品類': '肉類', '單位': '包', '單位成本': 120, '停用': False, '更新時間': ''},
     {'品名': '雞腿肉', '品類': '肉類', '單位': '公斤', '單位成本': 195, '停用': False, '更新時間': ''},
     {'品名': '高麗菜', '品類': '蔬菜', '單位': '顆', '單位成本': 35, '停用': False, '更新時間': ''},
+    {'品名': '海鮮', '品類': '海鮮', '單位': '包', '單位成本': 300, '停用': False, '更新時間': ''},
     {'品名': '停售舊品', '品類': '其他', '單位': '包', '單位成本': 10, '停用': True, '更新時間': ''},
 ]
 
@@ -297,8 +298,8 @@ def main() -> int:
         page.wait_for_timeout(600)
         check('換店要清掉展開狀態',
               page.locator('#s-item li.can-open', has_text='雞腿肉').first.locator('.subrank').is_visible(), False)
-        check('品類排行不給展開', page.locator('#s-cat li.can-open').count(), 0)
-        check('原因排行不給展開', page.locator('#s-reason li.can-open').count(), 0)
+        check('品類排行可以展開', page.locator('#s-cat li.can-open').count() > 0, True)
+        check('原因排行可以展開', page.locator('#s-reason li.can-open').count() > 0, True)
 
         # ── 展開層的「其他」要列出現場填的說明 ────────────
         page.click('.tab[data-tab=log]')
@@ -317,6 +318,55 @@ def main() -> int:
         check('說明原樣顯示不被當網頁語法', other.locator('.r-notes li').nth(1).inner_text(), '<b>冰箱跳電</b>')
         check('說明裡的標籤沒有變成粗體', other.locator('.r-notes b').count(), 0)
 
+        # ── 按品類點開看品名 ──────────────────────────────
+        page.click('.tab[data-tab=log]')
+        page.wait_for_timeout(300)
+        log(page, '海鮮', 1, '報廢')        # 300。品名跟品類同名，等一下用來測展開狀態會不會撞在一起
+        page.click('.tab[data-tab=stat]')
+        page.wait_for_timeout(400)
+        page.select_option('#s-store', '墨竹亭六張犁')
+        page.wait_for_timeout(300)
+        page.click('#s-seg button[data-k=today]')
+        page.wait_for_timeout(600)
+        cat = page.locator('#s-cat li.can-open', has_text='肉類').first
+        check('品類列標了有幾個品項', cat.locator('.r-hint').inner_text(), '2 個品項')
+        check('品類的下一層預設收著', cat.locator('.subrank').is_visible(), False)
+        cat.locator('.r-head').click()
+        page.wait_for_timeout(200)
+        check('品類展開列的是品名', cat.locator('.subrank .r-name').all_inner_texts(), ['雞腿肉', '雞胸肉'])
+        check('品名金額是該品類裡的', [money(x) for x in cat.locator('.subrank .r-amt').all_inner_texts()], [585.0, 360.0])
+        check('品類這層不掛原因說明', cat.locator('.r-notes').count(), 0)
+        check('展開品類不會連動按品名那張', page.locator('#s-item li.is-open').count(), 0)
+        check('展開品類不會連動按原因那張', page.locator('#s-reason li.is-open').count(), 0)
+
+        # 品名「海鮮」屬於品類「海鮮」：key 只用名稱的話，這兩列會一起開。
+        # 點開只動自己那一列的 class，要等下一次重畫才看得出來有沒有撞在一起，所以中間換一次期間。
+        page.locator('#s-cat li.can-open', has_text='海鮮').first.locator('.r-head').click()
+        page.wait_for_timeout(200)
+        page.click('#s-seg button[data-k=week]')
+        page.wait_for_timeout(600)
+        check('品類的海鮮跟品名的海鮮各自記展開',
+              page.locator('#s-item li.can-open', has_text='海鮮').first.locator('.subrank').is_visible(), False)
+        check('重畫後品類的海鮮自己還開著',
+              page.locator('#s-cat li.can-open', has_text='海鮮').first.locator('.subrank').is_visible(), True)
+        page.click('#s-seg button[data-k=today]')
+        page.wait_for_timeout(600)
+
+        # ── 按原因點開看品名，「其他」再列現場填的說明 ──────
+        other = page.locator('#s-reason li.can-open', has_text='其他').first
+        check('原因列標了有幾個品項', other.locator('.r-hint').inner_text(), '1 個品項')
+        other.locator('.r-head').click()
+        page.wait_for_timeout(200)
+        check('原因展開列的是品名', other.locator('.subrank > li .r-name').all_inner_texts(), ['雞胸肉'])
+        check('其他底下的品名再列說明', other.locator('.r-notes li').count(), 2)
+        check('按原因這條路的說明也原樣顯示', other.locator('.r-notes li').nth(1).inner_text(), '<b>冰箱跳電</b>')
+        check('按原因這條路的標籤也沒變粗體', other.locator('.r-notes b').count(), 0)
+        scrap = page.locator('#s-reason li.can-open', has_text='報廢').first
+        scrap.locator('.r-head').click()
+        page.wait_for_timeout(200)
+        check('報廢展開也是品名', scrap.locator('.subrank > li .r-name').all_inner_texts(), ['雞腿肉', '海鮮'])
+        check('報廢底下不列說明', scrap.locator('.r-notes').count(), 0)
+
         # ── 先選其他打了說明、又改選報廢：殘留的說明不能存進去 ──
         page.click('.tab[data-tab=log]')
         page.wait_for_timeout(300)
@@ -334,6 +384,32 @@ def main() -> int:
         page.wait_for_timeout(1200)
         check('改選報廢後照樣送得出去', len(back.loss), before + 1)
         check('改選報廢後殘留的說明沒存', back.loss[-1]['原因說明'] if len(back.loss) > before else None, '')
+
+        # ── 一個原因底下品名太多：只列前 10，尾巴收成一列 ────────
+        for i in range(12):
+            amt = 10 + i
+            back.loss.append({'id': 'bulk-%02d' % i, '日期': TODAY, '店別': '墨竹亭六張犁',
+                              '品類': '其他', '品名': '測試品%02d' % i, '耗損量': 1, '單位': '包',
+                              '單位成本': amt, '金額': amt, '原因': '盤點差異', '原因說明': '',
+                              '備註': '', '建立時間': '', '作廢': False})
+        page.reload()
+        page.wait_for_timeout(1500)
+        page.click('.tab[data-tab=stat]')
+        page.wait_for_timeout(400)
+        page.click('#s-seg button[data-k=today]')
+        page.wait_for_timeout(600)
+        bulk = page.locator('#s-reason li.can-open', has_text='盤點差異').first
+        check('原因列標了有幾個品項(12)', bulk.locator('.r-hint').inner_text(), '12 個品項')
+        bulk.locator('.r-head').click()
+        page.wait_for_timeout(200)
+        check('子清單只列十項加一列其餘', bulk.locator('.subrank > li').count(), 11)
+        check('末列寫剩下幾項', bulk.locator('.subrank > li').last.locator('.r-name').inner_text(), '其餘 2 項')
+        check('末列金額是被收起來那兩項的和',
+              money(bulk.locator('.subrank > li').last.locator('.r-amt').inner_text()), 21.0)
+        check('子清單金額加總等於該列金額',
+              round(sum(money(x) for x in bulk.locator('.subrank > li .r-amt').all_inner_texts()), 2),
+              money(bulk.locator('.r-head .r-amt').inner_text()))
+        check('子清單不給顯示全部按鈕', bulk.locator('.subrank .more').count(), 0)
 
         # ── 開頁抓不到雲端：要明講畫面是舊的，不能安靜裝沒事 ──────
         back.offline = True

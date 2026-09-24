@@ -151,7 +151,7 @@ li.is-off{opacity:.55}
 .rank .more{width:100%;appearance:none;background:none;border:0;font-family:inherit;font-size:14px;
   color:var(--green);padding:8px 0;cursor:pointer;text-decoration:underline}
 
-/* 按品名可點開看耗損原因。顯示與否只靠 li.is-open 這個 class，
+/* 三張排行都可點開看下一層。顯示與否只靠 li.is-open 這個 class，
    不用 [hidden]——.r-top 是 display:flex，hidden 會被蓋過去（踩過的坑） */
 .rank .r-head{display:block;width:100%;appearance:none;background:none;border:0;padding:0;
   font-family:inherit;color:inherit;text-align:left;cursor:pointer}
@@ -166,6 +166,8 @@ li.is-off{opacity:.55}
 .rank .subrank .r-name,.rank .subrank .r-amt{font-size:13px}
 .rank .subrank .r-amt{font-weight:500}
 .rank .subrank .r-sub{font-size:11px;margin-top:1px}
+/* 子清單只列前 10，尾巴收成這一列灰字「其餘 N 項」 */
+.rank .subrank li.r-rest .r-name,.rank .subrank li.r-rest .r-amt{color:var(--muted);font-weight:400}
 .rank .r-notes{list-style:none;margin:4px 0 0;padding:0}
 .rank .r-notes li{position:relative;padding:1px 0 1px 10px;border-top:0;font-size:12px;color:var(--ink);line-height:1.5}
 .rank .r-notes li::before{content:'';position:absolute;left:1px;top:.72em;width:4px;height:4px;border-radius:50%;background:var(--muted)}

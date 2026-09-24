@@ -161,7 +161,7 @@ li.is-off{opacity:.55}
 .rank .more{width:100%;appearance:none;background:none;border:0;font-family:inherit;font-size:14px;
   color:var(--green);padding:8px 0;cursor:pointer;text-decoration:underline}
 
-/* 按品名可點開看耗損原因。顯示與否只靠 li.is-open 這個 class，
+/* 三張排行都可點開看下一層。顯示與否只靠 li.is-open 這個 class，
    不用 [hidden]——.r-top 是 display:flex，hidden 會被蓋過去（踩過的坑） */
 .rank .r-head{display:block;width:100%;appearance:none;background:none;border:0;padding:0;
   font-family:inherit;color:inherit;text-align:left;cursor:pointer}
@@ -176,6 +176,8 @@ li.is-off{opacity:.55}
 .rank .subrank .r-name,.rank .subrank .r-amt{font-size:13px}
 .rank .subrank .r-amt{font-weight:500}
 .rank .subrank .r-sub{font-size:11px;margin-top:1px}
+/* 子清單只列前 10，尾巴收成這一列灰字「其餘 N 項」 */
+.rank .subrank li.r-rest .r-name,.rank .subrank li.r-rest .r-amt{color:var(--muted);font-weight:400}
 .rank .r-notes{list-style:none;margin:4px 0 0;padding:0}
 .rank .r-notes li{position:relative;padding:1px 0 1px 10px;border-top:0;font-size:12px;color:var(--ink);line-height:1.5}
 .rank .r-notes li::before{content:'';position:absolute;left:1px;top:.72em;width:4px;height:4px;border-radius:50%;background:var(--muted)}
@@ -398,7 +400,7 @@ li.is-off{opacity:.55}
   <p id="s-empty" class="empty">這段期間還沒有紀錄。</p>
 </section>
 
-<p class="ver">版本 2026-09-24 1724</p>
+<p class="ver">版本 2026-09-24 1954</p>
 </main>
 
 <div id="toast" class="toast" hidden></div>
@@ -480,11 +482,14 @@ var calc = (function () {
     return out;
   }
 
+  // 分組 key：空的一律歸「（未填）」。rank 與 summarize 共用，兩邊的寫法不會飄掉
+  function bucket(v) { return v || '（未填）'; }
+
   // subField 給了就多算一層：每項掛一個「明細」陣列（同一函式遞迴，佔比是在該項內部的佔比）
   function rank(records, field, subField) {
     var map = {}, groups = {}, total = 0;
     for (var i = 0; i < records.length; i++) {
-      var r = records[i], k = r[field] || '（未填）';
+      var r = records[i], k = bucket(r[field]);
       if (!map[k]) { map[k] = { 名稱: k, 金額: 0, 筆數: 0 }; groups[k] = []; }
       map[k].金額 = Math.round((map[k].金額 + r.金額) * 100) / 100;
       map[k].筆數 += 1;
@@ -514,6 +519,25 @@ var calc = (function () {
     return list.map(function (x) { return { 說明: x.說明, 筆數: x.筆數 }; });
   }
 
+  // 子清單只列前 n 項，尾巴收成一列「其餘」（用「其餘」欄位當標記，畫面才分得出它不是真品項）。
+  // 只做加總與四捨五入，不回頭重算金額。佔比照 rank 的算法（rest/total）——
+  // 把尾巴各項已四捨五入的佔比相加會飄，項數多的時候差得出來。
+  function topN(list, n) {
+    if (!list || list.length <= n) return list || [];
+    var total = 0, rest = 0, cnt = 0, i;
+    for (i = 0; i < list.length; i++) total = Math.round((total + list[i].金額) * 100) / 100;
+    for (i = n; i < list.length; i++) {
+      rest = Math.round((rest + list[i].金額) * 100) / 100;
+      cnt += list[i].筆數;
+    }
+    return list.slice(0, n).concat([{
+      其餘: list.length - n,
+      金額: rest,
+      筆數: cnt,
+      佔比: total ? Math.round(rest / total * 1000) / 10 : 0
+    }]);
+  }
+
   function daily(records, from, to) {
     var map = {};
     for (var i = 0; i < records.length; i++) {
@@ -532,22 +556,34 @@ var calc = (function () {
   function summarize(records, from, to, store) {
     var rows = live(records, from, to, store), total = 0;
     for (var i = 0; i < rows.length; i++) total = Math.round((total + rows[i].金額) * 100) / 100;
-    var byItem = rank(rows, '品名', '原因');   // 每個品名再拆成各耗損原因（統計頁可展開）
-    // 只有「其他」有說明欄（登記頁選其他才會出現、而且必填），別的原因就算殘留文字也不顯示
+
+    // 三張排行都再拆一層（統計頁點得開）：品類→品名、品名→原因、原因→品名
+    var byCat = rank(rows, '品類', '品名');
+    var byItem = rank(rows, '品名', '原因');
+    var byReason = rank(rows, '原因', '品名');
+
+    // 只有「其他」有說明欄（登記頁選其他才會出現、而且必填），別的原因就算殘留文字也不顯示。
+    // 說明永遠住在「某品名 × 其他」這一格：按品名掛在子層的「其他」，
+    // 按原因掛在「其他」底下的每個品名；按品類不掛——那層混了所有原因，
+    // 掛上去會讓人以為整個品類都是這個原因。
+    var others = rows.filter(function (r) { return r.原因 === '其他'; });
+    function notesOf(item) {
+      return notes(others.filter(function (r) { return bucket(r.品名) === item; }));
+    }
     byItem.forEach(function (it) {
-      it.明細.forEach(function (m) {
-        if (m.名稱 !== '其他') return;
-        m.說明 = notes(rows.filter(function (r) {
-          return (r.品名 || '（未填）') === it.名稱 && r.原因 === '其他';
-        }));
-      });
+      it.明細.forEach(function (m) { if (m.名稱 === '其他') m.說明 = notesOf(it.名稱); });
     });
+    byReason.forEach(function (rs) {
+      if (rs.名稱 !== '其他') return;
+      rs.明細.forEach(function (m) { m.說明 = notesOf(m.名稱); });
+    });
+
     return {
       總金額: total,
       筆數: rows.length,
-      按品類: rank(rows, '品類'),
+      按品類: byCat,
       按品名: byItem,
-      按原因: rank(rows, '原因'),
+      按原因: byReason,
       每日: (from && to) ? daily(rows, from, to) : []
     };
   }
@@ -606,7 +642,7 @@ var calc = (function () {
 
   return {
     ymd: ymd, newId: newId, makeRecord: makeRecord, live: live, STORES: STORES,
-    rank: rank, notes: notes, daily: daily, summarize: summarize, dateRange: dateRange, money: money,
+    rank: rank, notes: notes, topN: topN, daily: daily, summarize: summarize, dateRange: dateRange, money: money,
     shift: shift, days: days, prevRange: prevRange, csv: csv, CSV_COLS: CSV_COLS
   };
 })();
@@ -695,6 +731,7 @@ if (typeof document !== 'undefined') document.addEventListener('DOMContentLoaded
     document.querySelector('.store').textContent = '墨竹亭 · ' + (STORE_LABEL[name] || name);
     var cur = $('cur-store');
     if (cur) cur.textContent = STORE_LABEL[name] || name;
+    rankOpen = {};   // 成本設定頁換門市不會觸發 s-store 的 change，這條路要自己清
   }
 
   function askStore(force) {
@@ -1149,7 +1186,7 @@ if (typeof document !== 'undefined') document.addEventListener('DOMContentLoaded
       renderStat();
     });
   });
-  $('s-store').addEventListener('change', function () { itemOpen = {}; renderStat(); });
+  $('s-store').addEventListener('change', function () { rankOpen = {}; renderStat(); });
   $('s-from').addEventListener('change', renderStat);
   $('s-to').addEventListener('change', renderStat);
 
@@ -1163,16 +1200,21 @@ if (typeof document !== 'undefined') document.addEventListener('DOMContentLoaded
   }
 
   var itemRankOpen = false;
-  var itemOpen = {};      // 品名 → 展開中。存在變數裡，重畫統計不會把展開的收回去（換店才清掉）
+  // 展開中的列。key＝「排行的 ul id｜名稱」——三張排行共用一份也不會撞名
+  //（「肉類」當品類 vs 當品名是兩回事）。存在變數裡，重畫統計不會把展開的收回去；換店才清掉。
+  var rankOpen = {};
 
-  // 展開後的耗損原因清單：只有名稱／金額／佔比／筆數，不畫條狀圖（一列裡兩層條會看不出主次）
+  // 展開後的下一層清單：只有名稱／金額／佔比／筆數，不畫條狀圖（一列裡兩層條會看不出主次）。
+  // 只列前 10 項，剩下的收成一列灰字「其餘 N 項」——一個原因底下可能有幾十個品名。
   function subRank(list) {
     var ul = document.createElement('ul');
     ul.className = 'subrank';
-    list.forEach(function (x) {
+    calc.topN(list, 10).forEach(function (x) {
       var li = document.createElement('li');
+      var rest = !!x.其餘;
+      if (rest) li.className = 'r-rest';
       li.innerHTML =
-        '<div class="r-top"><span class="r-name">' + x.名稱 + '</span><span class="r-amt">' + calc.money(x.金額) + '</span></div>' +
+        '<div class="r-top"><span class="r-name">' + (rest ? '其餘 ' + x.其餘 + ' 項' : x.名稱) + '</span><span class="r-amt">' + calc.money(x.金額) + '</span></div>' +
         '<div class="r-sub">' + x.佔比 + '%　' + x.筆數 + ' 筆</div>';
       if (x.說明 && x.說明.length) {
         var nl = document.createElement('ul');
@@ -1194,32 +1236,34 @@ if (typeof document !== 'undefined') document.addEventListener('DOMContentLoaded
     return ul;
   }
 
-  // expandable＝這份排行的每一項可以點開看下一層（目前只有「按品名」用，展開的是耗損原因）
-  function fillRank(el, list, limit, expandable) {
+  // subLabel 給了就代表這份排行的每一列可以點開看下一層，它同時也是提示文字的單位
+  //（按品類／按原因展開的是品項，按品名展開的是原因）
+  function fillRank(el, list, limit, subLabel) {
     el.innerHTML = '';
     var top = list.length ? list[0].金額 : 0;
     var shown = (limit && list.length > limit) ? list.slice(0, limit) : list;
     shown.forEach(function (r) {
       var li = document.createElement('li');
-      var canOpen = !!(expandable && r.明細 && r.明細.length);
+      var canOpen = !!(subLabel && r.明細 && r.明細.length);
       var body =
         '<div class="r-top"><span class="r-name">' + r.名稱 + '</span><span class="r-amt">' + calc.money(r.金額) + '</span></div>' +
         '<div class="r-sub">' + r.佔比 + '%　' + r.筆數 + ' 筆' +
-        (canOpen ? '<span class="r-hint">' + r.明細.length + ' 個原因</span>' : '') + '</div>' +
+        (canOpen ? '<span class="r-hint">' + r.明細.length + ' 個' + subLabel + '</span>' : '') + '</div>' +
         '<div class="r-bar"><i style="width:' + (top ? Math.max(2, r.金額 / top * 100) : 0) + '%"></i></div>';
       if (!canOpen) {
         li.innerHTML = body;
       } else {
         // 展開／收合只動這一列的 class，不重畫整頁——重畫會把捲動位置彈回頂端
-        li.className = 'can-open' + (itemOpen[r.名稱] ? ' is-open' : '');
+        var key = el.id + '｜' + r.名稱;
+        li.className = 'can-open' + (rankOpen[key] ? ' is-open' : '');
         var head = document.createElement('button');
         head.type = 'button';
         head.className = 'r-head';
-        head.setAttribute('aria-expanded', itemOpen[r.名稱] ? 'true' : 'false');
+        head.setAttribute('aria-expanded', rankOpen[key] ? 'true' : 'false');
         head.innerHTML = body;
         head.addEventListener('click', function () {
-          var nowOpen = !itemOpen[r.名稱];
-          itemOpen[r.名稱] = nowOpen;
+          var nowOpen = !rankOpen[key];
+          rankOpen[key] = nowOpen;
           li.classList.toggle('is-open', nowOpen);
           head.setAttribute('aria-expanded', nowOpen ? 'true' : 'false');
         });
@@ -1272,9 +1316,9 @@ if (typeof document !== 'undefined') document.addEventListener('DOMContentLoaded
     $('s-axis-a').textContent = rg.from.slice(5).replace('-', '/');
     $('s-axis-b').textContent = rg.to.slice(5).replace('-', '/');
 
-    fillRank($('s-cat'), sum.按品類);
-    fillRank($('s-item'), sum.按品名, itemRankOpen ? 0 : 10, true);   // 品名可能上百項，先給前 10；可點開看各耗損原因
-    fillRank($('s-reason'), sum.按原因);
+    fillRank($('s-cat'), sum.按品類, 0, '品項');                       // 品類是固定選項，頂層不設上限
+    fillRank($('s-item'), sum.按品名, itemRankOpen ? 0 : 10, '原因');   // 品名可能上百項，先給前 10
+    fillRank($('s-reason'), sum.按原因, 0, '品項');
 
     var none = sum.筆數 === 0;
     $('s-empty').hidden = !none;
