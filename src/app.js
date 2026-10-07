@@ -246,8 +246,8 @@ if (typeof module !== 'undefined' && module.exports) {
 }
 
 /* ---------- 雲端設定 ---------- */
-// Apps Script Web App（部署 v1）。改了要重 build。
-var API_URL = 'https://script.google.com/macros/s/AKfycbzpCW2ZwSjX14D0Ry5rMnNmoaBr52VHDKWKiQlUjSW0zy1jdJGlaeRicgsvWn-LQqdNKA/exec';
+// Mac mini Funnel 後端（/mztloss/api）。改了要重 build。
+var API_URL = 'https://dingzhaoyuandemac-mini.tailc27c34.ts.net/mztloss/api';
 var SYNC_DAYS = 120;   // 開頁時抓回最近幾天的紀錄
 
 /* ---------- store：localStorage（雲端的快取＋待送佇列） ---------- */
@@ -287,7 +287,13 @@ var api = {
       }).then(function (r) { return r.json(); }).then(function (j) {
         if (done) return;
         done = true; clearTimeout(timer);
-        if (j && j.ok) resolve(j.data); else reject(new Error((j && j.error) || '伺服器錯誤'));
+        if (j && j.ok) resolve(j.data);
+        else {
+          var code = (j && j.error) || '伺服器錯誤';
+          // 搬家／維護中的回應：不顯示原始碼，工作留在待送佇列（只有成功才 shift）
+          if (code === 'MOVED' || code === 'READONLY') code = '系統搬家中，這筆先存在手機，稍後自動送出';
+          reject(new Error(code));
+        }
       }).catch(function (err) {
         if (done) return;
         done = true; clearTimeout(timer);

@@ -97,6 +97,7 @@ def install(page, backend):
         r.fulfill(status=200, content_type='application/json',
                   body=json.dumps({'ok': True, 'data': backend.handle(req)}, ensure_ascii=False))
     page.route('**/script.google.com/**', route)
+    page.route('**/mztloss/api', route)
 
 
 results = []
