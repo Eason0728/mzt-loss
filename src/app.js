@@ -1,13 +1,14 @@
-// 墨竹亭｜耗損登記表（光復／金山／六張犁／台中美村 四店共用）
+// 墨竹亭｜耗損登記表（光復／金山／六張犁／台中美村／內湖瑞光／台中文心 六店共用）
 // 設計約束：金額只在 calc.makeRecord() 算一次；歷史金額永不重算；品項一律用「名稱」當 key。
 
-// 四店共用同一個網址；實際店別存在各自手機的 localStorage（裝置綁定）
+// 六店共用同一個網址；實際店別存在各自手機的 localStorage（裝置綁定）
 // 全部都是墨竹亭。店別值帶品牌前綴，匯出到試算表時一眼看得出是哪家公司。
-var STORES = ['墨竹亭光復', '墨竹亭金山', '墨竹亭六張犁', '墨竹亭美村'];
+var STORES = ['墨竹亭光復', '墨竹亭金山', '墨竹亭六張犁', '墨竹亭美村', '墨竹亭瑞光', '墨竹亭文心'];
 // 顯示名稱帶縣市；STORES 的值是資料庫存的東西，改顯示名稱不要動到它
 var STORE_LABEL = {
   '墨竹亭光復': '新竹光復店', '墨竹亭金山': '新竹金山店',
-  '墨竹亭六張犁': '台北六張犁店', '墨竹亭美村': '台中美村店'
+  '墨竹亭六張犁': '台北六張犁店', '墨竹亭美村': '台中美村店',
+  '墨竹亭瑞光': '內湖瑞光店', '墨竹亭文心': '台中文心店'
 };
 var STORE_NAME = '墨竹亭光復';   // 預設值，開頁時由 localStorage 覆蓋
 
@@ -885,7 +886,7 @@ if (typeof document !== 'undefined') document.addEventListener('DOMContentLoaded
   function renderStat() {
     var rg = statRange();
     if (!rg) return;
-    var who = $('s-store') ? $('s-store').value : STORE_NAME;   // 空字串＝全部三店
+    var who = $('s-store') ? $('s-store').value : STORE_NAME;   // 空字串＝全部門市
     var sum = calc.summarize(records, rg.from, rg.to, who);
     var pv = calc.prevRange(rg.from, rg.to);
     var prev = calc.summarize(records, pv.from, pv.to, who);

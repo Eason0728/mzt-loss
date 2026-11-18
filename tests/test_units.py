@@ -125,10 +125,21 @@ const S = [
 ];
 eq('只看金山', calc.summarize(S,'2026-08-01','2026-08-01','墨竹亭金山').總金額, 200);
 eq('只看金山筆數(排除作廢)', calc.summarize(S,'2026-08-01','2026-08-01','墨竹亭金山').筆數, 1);
-eq('店別留空＝全部三店', calc.summarize(S,'2026-08-01','2026-08-01','').總金額, 700);
+eq('店別留空＝全部門市', calc.summarize(S,'2026-08-01','2026-08-01','').總金額, 700);
+const S2 = S.concat([
+  {日期:'2026-08-01', 店別:'墨竹亭瑞光', 品類:'肉類', 品名:'e', 原因:'報廢', 金額:1600, 作廢:false},
+  {日期:'2026-08-01', 店別:'墨竹亭文心', 品類:'肉類', 品名:'f', 原因:'過期', 金額:3200, 作廢:false},
+]);
+eq('只看瑞光', calc.summarize(S2,'2026-08-01','2026-08-01','墨竹亭瑞光').總金額, 1600);
+eq('只看文心', calc.summarize(S2,'2026-08-01','2026-08-01','墨竹亭文心').總金額, 3200);
+eq('全部門市含新兩家', calc.summarize(S2,'2026-08-01','2026-08-01','').總金額, 5500);
+eq('瑞光不混進光復', calc.summarize(S2,'2026-08-01','2026-08-01','墨竹亭光復').總金額, 100);
 eq('不存在的店＝0', calc.summarize(S,'2026-08-01','2026-08-01','墨竹亭不存在').總金額, 0);
-eq('門市清單', require(APP_PATH).STORES, ['墨竹亭光復','墨竹亭金山','墨竹亭六張犁','墨竹亭美村']);
+eq('門市清單', require(APP_PATH).STORES, ['墨竹亭光復','墨竹亭金山','墨竹亭六張犁','墨竹亭美村','墨竹亭瑞光','墨竹亭文心']);
 eq('每家店都有顯示名稱', require(APP_PATH).STORES.every(s => !!require(APP_PATH).STORE_LABEL[s]), true);
+eq('門市共六家', require(APP_PATH).STORES.length, 6);
+eq('新店顯示名稱', [require(APP_PATH).STORE_LABEL['墨竹亭瑞光'], require(APP_PATH).STORE_LABEL['墨竹亭文心']], ['內湖瑞光店','台中文心店']);
+eq('店別值不重複', new Set(require(APP_PATH).STORES).size, 6);
 eq('店別值都帶品牌前綴', require(APP_PATH).STORES.every(s => s.startsWith('墨竹亭')), true);
 
 // 期間
